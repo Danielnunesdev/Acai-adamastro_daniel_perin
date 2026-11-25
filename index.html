@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Açaí do Bairro - Pedidos</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: #f4f1f8; color: #222; line-height: 1.4; padding-bottom: 40px; }
+    header { background: #4a148c; color: #fff; text-align: center; padding: 18px 16px; }
+    header h1 { font-size: 1.4rem; }
+    header p { font-size: 0.9rem; opacity: 0.9; }
+    main { max-width: 540px; margin: 16px auto; padding: 0 12px; }
+    .card { background: #fff; border-radius: 10px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); }
+    h2 { font-size: 1.1rem; color: #4a148c; margin-bottom: 12px; }
+    .header-secao { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .header-secao h2 { margin-bottom: 0; }
+    .badge { background: #ede7f6; color: #4a148c; font-size: 0.85rem; font-weight: 700; padding: 4px 10px; border-radius: 6px; }
+    .opcoes-copo { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .copo-item { border: 2px solid #ddd; border-radius: 8px; padding: 10px 6px; text-align: center; cursor: pointer; display: flex; flex-direction: column; gap: 4px; }
+    .copo-item input { display: none; }
+    .copo-item.selecionado { border-color: #6a1b9a; background: #f3e5f5; }
+    .copo-item .titulo { font-weight: 700; font-size: 0.95rem; }
+    .copo-item .preco { color: #2e7d32; font-weight: 700; font-size: 0.9rem; }
+    .copo-item .regra { font-size: 0.75rem; color: #555; }
+    .lista-adicionais { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .adicional-item { display: flex; align-items: center; gap: 8px; border: 1px solid #ddd; padding: 10px; border-radius: 8px; font-size: 0.9rem; cursor: pointer; }
+    .adicional-item.bloqueado { opacity: 0.45; background: #f5f5f5; }
+    .alerta { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; padding: 10px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 10px; font-weight: 600; }
+    .oculto { display: none !important; }
+    .aviso-entrega { font-size: 0.85rem; color: #555; margin-bottom: 12px; }
+    .campo { margin-bottom: 12px; }
+    .campo label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; }
+    .campo input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; }
+    .campo input:focus { outline: none; border-color: #6a1b9a; }
+    .linha-resumo { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.95rem; }
+    hr { border: 0; border-top: 1px solid #eee; margin: 10px 0; }
+    .linha-resumo.total { font-size: 1.25rem; font-weight: 700; color: #2e7d32; }
+    button { width: 100%; background: #2e7d32; color: #fff; border: none; padding: 15px; font-size: 1.05rem; font-weight: 700; border-radius: 8px; cursor: pointer; margin-top: 12px; display: block; }
+    button:active { opacity: 0.9; }
+    #btn-novo { background: #4a148c; }
+    #detalhes-comprovante { font-size: 0.95rem; line-height: 1.6; margin-bottom: 12px; }
+    @media (max-width: 400px) { .opcoes-copo, .lista-adicionais { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🍇 Açaí do Bairro</h1>
+    <p>Monte seu copo rápido e peça sem complicação</p>
+  </header>
+
+  <main>
+    <!-- 1. Tamanho -->
+    <section class="card">
+      <h2>1. Escolha o Tamanho do Copo</h2>
+      <div class="opcoes-copo" id="lista-copos">
+        <label class="copo-item selecionado">
+          <input type="radio" name="copo" value="300" data-preco="12" data-limite="2" checked>
+          <span class="titulo">Copo 300ml</span>
+          <span class="preco">R$ 12,00</span>
+          <span class="regra">Máx. 2 adicionais</span>
+        </label>
+        <label class="copo-item">
+          <input type="radio" name="copo" value="500" data-preco="16" data-limite="4">
+          <span class="titulo">Copo 500ml</span>
+          <span class="preco">R$ 16,00</span>
+          <span class="regra">Máx. 4 adicionais</span>
+        </label>
+        <label class="copo-item">
+          <input type="radio" name="copo" value="700" data-preco="20" data-limite="6">
+          <span class="titulo">Copo 700ml</span>
+          <span class="preco">R$ 20,00</span>
+          <span class="regra">Máx. 6 adicionais</span>
+        </label>
+      </div>
+    </section>
+
+    <!-- 2. Adicionais -->
+    <section class="card">
+      <div class="header-secao">
+        <h2>2. Escolha os Adicionais</h2>
+        <span id="contador-adicionais" class="badge">0 / 2 selecionados</span>
+      </div>
+
+      <div id="alerta-limite" class="alerta oculto" role="alert">
+        ⚠️ Limite atingido! O copo selecionado permite no máximo <strong id="texto-limite">2</strong> adicionais.
+      </div>
+
+      <div class="lista-adicionais" id="lista-adicionais">
+        <label class="adicional-item">
+          <input type="checkbox" value="Leite em Pó" data-preco="2">
+          <span>Leite em Pó (+ R$ 2,00)</span>
+        </label>
+        <label class="adicional-item">
+          <input type="checkbox" value="Banana" data-preco="1.5">
+          <span>Banana (+ R$ 1,50)</span>
+        </label>
+        <label class="adicional-item">
+          <input type="checkbox" value="Granola" data-preco="2">
+          <span>Granola Crocante (+ R$ 2,00)</span>
+        </label>
+        <label class="adicional-item">
+          <input type="checkbox" value="Leite Condensado" data-preco="2.5">
+          <span>Leite Condensado (+ R$ 2,50)</span>
+        </label>
+        <label class="adicional-item">
+          <input type="checkbox" value="Paçoca" data-preco="2">
+          <span>Paçoca (+ R$ 2,00)</span>
+        </label>
+        <label class="adicional-item">
+          <input type="checkbox" value="Morango" data-preco="3.5">
+          <span>Morango (+ R$ 3,50)</span>
+        </label>
+      </div>
+    </section>
+
+    <!-- 3. Dados de Entrega -->
+    <section class="card">
+      <h2>3. Dados para Entrega</h2>
+      <p class="aviso-entrega">Frete: <strong>R$ 5,00</strong> para Centro | <strong>R$ 10,00</strong> demais bairros.</p>
+
+      <div class="campo">
+        <label for="nome">Nome Completo *</label>
+        <input type="text" id="nome" placeholder="Ex: João Silva">
+      </div>
+      <div class="campo">
+        <label for="telefone">Telefone com DDD *</label>
+        <input type="tel" id="telefone" placeholder="(11) 99999-9999" maxlength="15">
+      </div>
+      <div class="campo">
+        <label for="bairro">Bairro *</label>
+        <input type="text" id="bairro" placeholder="Digite o bairro (Ex: Centro)">
+      </div>
+
+      <div id="alerta-validacao" class="alerta oculto" role="alert"></div>
+    </section>
+
+    <!-- 4. Resumo e Botão de Submeter -->
+    <section class="card">
+      <h2>4. Resumo do Pedido</h2>
+      <div class="linha-resumo">
+        <span>Copo + Adicionais:</span>
+        <span id="valor-acai">R$ 12,00</span>
+      </div>
+      <div class="linha-resumo">
+        <span>Taxa de Entrega (<span id="label-bairro">Informe o bairro</span>):</span>
+        <span id="valor-entrega">R$ 10,00</span>
+      </div>
+      <hr>
+      <div class="linha-resumo total">
+        <span>Total a Pagar:</span>
+        <span id="valor-total">R$ 22,00</span>
+      </div>
+
+      <button type="button" id="btn-confirmar">Confirmar Pedido</button>
+    </section>
+
+    <!-- 5. Comprovante -->
+    <section id="comprovante" class="card oculto">
+      <h2>✅ Pedido Confirmado!</h2>
+      <div id="detalhes-comprovante"></div>
+      <button type="button" id="btn-novo">Fazer Novo Pedido</button>
+    </section>
+  </main>
+
+  <script>
+    const listaCopos = document.getElementById('lista-copos');
+    const listaAdicionais = document.getElementById('lista-adicionais');
+    const contadorAdicionais = document.getElementById('contador-adicionais');
+    const alertaLimite = document.getElementById('alerta-limite');
+    const textoLimite = document.getElementById('texto-limite');
+
+    const inputNome = document.getElementById('nome');
+    const inputTelefone = document.getElementById('telefone');
+    const inputBairro = document.getElementById('bairro');
+    const alertaValidacao = document.getElementById('alerta-validacao');
+
+    const elValorAcai = document.getElementById('valor-acai');
+    const elLabelBairro = document.getElementById('label-bairro');
+    const elValorEntrega = document.getElementById('valor-entrega');
+    const elValorTotal = document.getElementById('valor-total');
+
+    const btnConfirmar = document.getElementById('btn-confirmar');
+    const secComprovante = document.getElementById('comprovante');
+    const detalhesComprovante = document.getElementById('detalhes-comprovante');
+    const btnNovo = document.getElementById('btn-novo');
+
+    function formatarMoeda(valor) {
+      return 'R$ ' + valor.toFixed(2).replace('.', ',');
+    }
+
+    function obterCopo() {
+      const sel = document.querySelector('input[name="copo"]:checked');
+      return {
+        tamanho: sel.value,
+        preco: parseFloat(sel.dataset.preco),
+        limite: parseInt(sel.dataset.limite, 10)
+      };
+    }
+
+    function obterMarcados() {
+      return Array.from(document.querySelectorAll('#lista-adicionais input[type="checkbox"]:checked'));
+    }
+
+    function atualizarTela() {
+      const copo = obterCopo();
+      let marcados = obterMarcados();
+
+      document.querySelectorAll('input[name="copo"]').forEach(r => {
+        r.parentElement.classList.toggle('selecionado', r.checked);
+      });
+
+      if (marcados.length > copo.limite) {
+        for (let i = copo.limite; i < marcados.length; i++) {
+          marcados[i].checked = false;
+        }
+        textoLimite.textContent = copo.limite;
+        alertaLimite.classList.remove('oculto');
+        marcados = obterMarcados();
+      }
+
+      const atingiuLimite = marcados.length >= copo.limite;
+      document.querySelectorAll('#lista-adicionais input[type="checkbox"]').forEach(cb => {
+        cb.parentElement.classList.toggle('bloqueado', !cb.checked && atingiuLimite);
+      });
+
+      contadorAdicionais.textContent = marcados.length + ' / ' + copo.limite + ' selecionados';
+
+      const somaAdicionais = marcados.reduce((acc, cb) => acc + parseFloat(cb.dataset.preco), 0);
+      const subtotalAcai = copo.preco + somaAdicionais;
+
+      const bairro = inputBairro.value.trim();
+      let taxa = 10;
+      if (!bairro) {
+        elLabelBairro.textContent = 'Informe o bairro';
+      } else if (bairro.toLowerCase() === 'centro') {
+        elLabelBairro.textContent = 'Centro';
+        taxa = 5;
+      } else {
+        elLabelBairro.textContent = bairro;
+      }
+
+      elValorAcai.textContent = formatarMoeda(subtotalAcai);
+      elValorEntrega.textContent = formatarMoeda(taxa);
+      elValorTotal.textContent = formatarMoeda(subtotalAcai + taxa);
+    }
+
+    listaCopos.addEventListener('change', () => {
+      alertaLimite.classList.add('oculto');
+      atualizarTela();
+    });
+
+    listaAdicionais.addEventListener('change', (e) => {
+      if (e.target.type !== 'checkbox') return;
+      const copo = obterCopo();
+      const marcados = obterMarcados();
+
+      if (marcados.length > copo.limite) {
+        e.target.checked = false;
+        textoLimite.textContent = copo.limite;
+        alertaLimite.classList.remove('oculto');
+        atualizarTela();
+        return;
+      }
+
+      alertaLimite.classList.add('oculto');
+      atualizarTela();
+    });
+
+    inputTelefone.addEventListener('input', (e) => {
+      let v = e.target.value.replace(/\D/g, '').slice(0, 11);
+      if (v.length > 6) v = `(${v.slice(0,2)}) ${v.slice(2,7)}-${v.slice(7)}`;
+      else if (v.length > 2) v = `(${v.slice(0,2)}) ${v.slice(2)}`;
+      else if (v.length > 0) v = `(${v}`;
+      e.target.value = v;
+    });
+
+    inputBairro.addEventListener('input', atualizarTela);
+
+    btnConfirmar.addEventListener('click', () => {
+      const nome = inputNome.value.trim();
+      const tel = inputTelefone.value.replace(/\D/g, '');
+      const bairro = inputBairro.value.trim();
+
+      if (!nome || tel.length < 10 || !bairro) {
+        alertaValidacao.textContent = '⚠️ Preencha Nome, Telefone com DDD e Bairro antes de confirmar.';
+        alertaValidacao.classList.remove('oculto');
+        return;
+      }
+
+      alertaValidacao.classList.add('oculto');
+      const copo = obterCopo();
+      const lista = obterMarcados().map(cb => cb.value);
+
+      detalhesComprovante.innerHTML = `
+        <p><strong>Cliente:</strong> ${nome}</p>
+        <p><strong>Telefone:</strong> ${inputTelefone.value}</p>
+        <p><strong>Bairro:</strong> ${bairro}</p>
+        <hr>
+        <p><strong>Pedido:</strong> Copo ${copo.tamanho}ml</p>
+        <p><strong>Adicionais:</strong> ${lista.length ? lista.join(', ') : 'Nenhum'}</p>
+        <p><strong>Entrega:</strong> ${elValorEntrega.textContent}</p>
+        <p><strong>Total Final:</strong> ${elValorTotal.textContent}</p>
+      `;
+
+      document.querySelectorAll('main > .card:not(#comprovante)').forEach(s => s.classList.add('oculto'));
+      secComprovante.classList.remove('oculto');
+    });
+
+    btnNovo.addEventListener('click', () => {
+      document.querySelectorAll('#lista-adicionais input').forEach(cb => cb.checked = false);
+      document.querySelector('input[name="copo"][value="300"]').checked = true;
+      inputNome.value = '';
+      inputTelefone.value = '';
+      inputBairro.value = '';
+      alertaLimite.classList.add('oculto');
+      alertaValidacao.classList.add('oculto');
+      secComprovante.classList.add('oculto');
+      document.querySelectorAll('main > .card:not(#comprovante)').forEach(s => s.classList.remove('oculto'));
+      atualizarTela();
+    });
+
+    atualizarTela();
+  </script>
+</body>
+</html>
